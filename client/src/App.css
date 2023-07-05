@@ -1,0 +1,10 @@
+.chat-body{
+    height:200px;
+    border: 1px solid #263238;
+  background: #fff;
+  width:300px;
+  margin-left: 1cm ;
+}
+.chat-header ,.chat-footer{
+margin-left:1cm;
+}
