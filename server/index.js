@@ -3,6 +3,7 @@ const app = express();
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+
 app.use(cors());
 
 const server = http.createServer(app);
@@ -14,21 +15,44 @@ const io = new Server(server, {
   },
 });
 
+const rooms = {}; 
+
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
   socket.on("join_room", (data) => {
-    socket.join(data);
-    console.log(`User with ID: ${socket.id} joined room: ${data}`);
+    const { room, username } = data;
+    socket.join(room);
+    socket.username = username;
+    socket.room = room;
+
+    if (!rooms[room]) {
+      rooms[room] = [];
+    }
+    if (!rooms[room].includes(username)) {
+      rooms[room].push(username);
+    }
+
+    console.log(`User ${username} joined room: ${room}`);
+
+    
+    io.to(room).emit("user_list", rooms[room]);
+    socket.to(room).emit("user_joined", { username });
   });
 
-  socket.on("send_message", (data,room) => {
-    console.log(room)
-    socket.to(room).emit("receive_message", data);
+  socket.on("send_message", (data) => {
+    socket.to(data.room).emit("receive_message", data);
   });
 
   socket.on("disconnect", () => {
-    console.log("User Disconnected", socket.id);
+    const { room, username } = socket;
+    console.log(`User ${username} disconnected`);
+
+    if (room && username) {
+      rooms[room] = rooms[room].filter((user) => user !== username);
+      io.to(room).emit("user_list", rooms[room]); 
+      socket.to(room).emit("user_left", { username });
+    }
   });
 });
 
